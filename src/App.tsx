@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CallsPage from './pages/CallsPage';
 import AgentsPage from './pages/AgentsPage';
+import AgentFormPage from './pages/AgentFormPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 
@@ -78,6 +79,22 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <AgentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agents/new"
+          element={
+            <ProtectedRoute>
+              <AgentFormPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agents/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AgentFormPage />
             </ProtectedRoute>
           }
         />
