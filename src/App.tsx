@@ -8,6 +8,8 @@ import { Layout } from './layouts';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import CallsPage from './pages/CallsPage';
+import CallDetailPage from './pages/CallDetailPage';
+import NewCallPage from './pages/NewCallPage';
 import AgentsPage from './pages/AgentsPage';
 import AgentFormPage from './pages/AgentFormPage';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -71,6 +73,22 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <CallsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calls/new"
+          element={
+            <ProtectedRoute>
+              <NewCallPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calls/:id"
+          element={
+            <ProtectedRoute>
+              <CallDetailPage />
             </ProtectedRoute>
           }
         />

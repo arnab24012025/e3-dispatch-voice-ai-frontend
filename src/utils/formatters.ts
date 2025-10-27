@@ -2,6 +2,10 @@ import { format, formatDistance } from 'date-fns';
 import { DATE_FORMAT, TIME_FORMAT, DATETIME_FORMAT } from './constants';
 
 /**
+ * Utility functions for formatting data
+ */
+
+/**
  * Format date to readable string
  */
 export const formatDate = (date: string | Date): string => {
@@ -26,9 +30,16 @@ export const formatTime = (date: string | Date): string => {
 /**
  * Format datetime to readable string
  */
-export const formatDateTime = (date: string | Date): string => {
+export const formatDateTime = (dateString: string | Date): string => {
   try {
-    return format(new Date(date), DATETIME_FORMAT);
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   } catch {
     return 'Invalid datetime';
   }
@@ -37,61 +48,70 @@ export const formatDateTime = (date: string | Date): string => {
 /**
  * Format relative time (e.g., "2 hours ago")
  */
-export const formatRelativeTime = (date: string | Date): string => {
+export const formatRelativeTime = (dateString: string | Date): string => {
   try {
-    return formatDistance(new Date(date), new Date(), { addSuffix: true });
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return 'just now';
+    if (diffMin < 60) return `${diffMin} min${diffMin !== 1 ? 's' : ''} ago`;
+    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    if (diffDay < 7) return `${diffDay} day${diffDay !== 1 ? 's' : ''} ago`;
+    
+    return date.toLocaleDateString();
   } catch {
     return 'Unknown';
   }
 };
 
 /**
- * Format duration in seconds to MM:SS
+ * Format duration in seconds to MM:SS or HH:MM:SS
  */
 export const formatDuration = (seconds: number): string => {
   if (!seconds || seconds < 0) return '0:00';
   
-  const mins = Math.floor(seconds / 60);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
   
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
 };
 
 /**
- * Format phone number
+ * Format phone number (US format)
  */
 export const formatPhoneNumber = (phone: string): string => {
-  // Remove all non-digits
   const cleaned = phone.replace(/\D/g, '');
   
-  // Format as (XXX) XXX-XXXX
-  const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
   
-  if (match) {
-    return `(${match[1]}) ${match[2]}-${match[3]}`;
+  if (cleaned.length === 11 && cleaned[0] === '1') {
+    return `+1 (${cleaned.slice(1, 4)}) ${cleaned.slice(4, 7)}-${cleaned.slice(7)}`;
   }
   
   return phone;
 };
 
 /**
- * Truncate text with ellipsis
+ * Format percentage
  */
-export const truncate = (text: string, maxLength: number): string => {
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength) + '...';
+export const formatPercentage = (value: number): string => {
+  return `${Math.round(value * 100)}%`;
 };
 
 /**
- * Capitalize first letter
- */
-export const capitalize = (text: string): string => {
-  if (!text) return '';
-  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
-};
-
-/**
- * Format sentiment with emoji
+ * Format sentiment type to display string with emoji
  */
 export const formatSentiment = (sentiment: string): string => {
   const sentimentMap: Record<string, string> = {
@@ -111,4 +131,20 @@ export const getQualityScoreColor = (score: number): string => {
   if (score >= 8) return 'text-green-600';
   if (score >= 6) return 'text-yellow-600';
   return 'text-red-600';
+};
+
+/**
+ * Truncate text with ellipsis
+ */
+export const truncate = (text: string, maxLength: number): string => {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+};
+
+/**
+ * Capitalize first letter
+ */
+export const capitalize = (text: string): string => {
+  if (!text) return '';
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 };
