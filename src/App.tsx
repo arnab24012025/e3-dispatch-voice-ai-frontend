@@ -1,22 +1,21 @@
 import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './redux/store';
 import { useAppDispatch, useAppSelector } from './redux/hooks';
 import { loadUser } from './redux/slices/authSlice';
+import LoginPage from './pages/LoginPage';
+
 
 /**
- * App content component
+ * Protected Route Component
  */
-function AppContent() {
-  const dispatch = useAppDispatch();
-  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+interface ProtectedRouteProps {
+  children: React.ReactElement;
+}
 
-  useEffect(() => {
-    // Load user if token exists
-    if (localStorage.getItem('auth_token')) {
-      dispatch(loadUser());
-    }
-  }, [dispatch]);
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
 
   if (isLoading) {
     return (
@@ -29,28 +28,75 @@ function AppContent() {
     );
   }
 
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
+};
+
+/**
+ * Temporary Dashboard (placeholder)
+ */
+const DashboardPlaceholder: React.FC = () => {
+  const { user } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
+
+  const handleLogout = () => {
+    dispatch({ type: 'auth/logout' });
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Dispatch Voice AI
-          </h1>
-          <p className="text-gray-600 mb-8">
-            AI-powered logistics communication platform
-          </p>
-          {isAuthenticated ? (
-            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-              ✅ Authenticated
-            </div>
-          ) : (
-            <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-              🔒 Not authenticated
-            </div>
-          )}
-        </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Welcome, {user?.username}!
+        </h1>
+        <p className="text-gray-600 mb-8">
+          Dashboard coming soon...
+        </p>
+        <button
+          onClick={handleLogout}
+          className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Logout
+        </button>
       </div>
     </div>
+  );
+};
+
+/**
+ * App content with routing
+ */
+function AppContent() {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    // Load user if token exists
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      dispatch(loadUser());
+    }
+  }, [dispatch]);
+
+  return (
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPlaceholder />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirects */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

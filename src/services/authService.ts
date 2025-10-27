@@ -10,15 +10,10 @@ class AuthService {
    * Login user
    */
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    // API expects form data for OAuth2
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
-
-    const response = await api.post<AuthResponse>('/auth/login', formData, {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+    // Backend expects JSON with username and password
+    const response = await api.post<AuthResponse>('/auth/login', {
+      username: credentials.username,
+      password: credentials.password,
     });
 
     // Store token
