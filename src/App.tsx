@@ -4,8 +4,13 @@ import { Provider } from 'react-redux';
 import { store } from './redux/store';
 import { useAppDispatch, useAppSelector } from './redux/hooks';
 import { loadUser } from './redux/slices/authSlice';
+import { Layout } from './layouts';
 import LoginPage from './pages/LoginPage';
-
+import DashboardPage from './pages/DashboardPage';
+import CallsPage from './pages/CallsPage';
+import AgentsPage from './pages/AgentsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import SettingsPage from './pages/SettingsPage';
 
 /**
  * Protected Route Component
@@ -28,38 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
-
-/**
- * Temporary Dashboard (placeholder)
- */
-const DashboardPlaceholder: React.FC = () => {
-  const { user } = useAppSelector((state) => state.auth);
-  const dispatch = useAppDispatch();
-
-  const handleLogout = () => {
-    dispatch({ type: 'auth/logout' });
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Welcome, {user?.username}!
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Dashboard coming soon...
-        </p>
-        <button
-          onClick={handleLogout}
-          className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  );
+  return isAuthenticated ? <Layout>{children}</Layout> : <Navigate to="/login" replace />;
 };
 
 /**
@@ -87,14 +61,46 @@ function AppContent() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPlaceholder />
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calls"
+          element={
+            <ProtectedRoute>
+              <CallsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/agents"
+          element={
+            <ProtectedRoute>
+              <AgentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
 
         {/* Redirects */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>
   );

@@ -25,31 +25,10 @@ export const login = createAsyncThunk(
       const user = await authService.getCurrentUser();
       return { user, token: authResponse.access_token };
     } catch (error: any) {
-      // Handle different error response formats
-      let errorMessage = 'Login failed. Please check your credentials.';
-      
-      if (error.response?.data) {
-        const data = error.response.data;
-        
-        // FastAPI validation error (array of error objects)
-        if (Array.isArray(data.detail)) {
-          errorMessage = data.detail.map((err: any) => err.msg).join(', ');
-        }
-        // Simple string error
-        else if (typeof data.detail === 'string') {
-          errorMessage = data.detail;
-        }
-        // Object error
-        else if (data.detail && typeof data.detail === 'object') {
-          errorMessage = JSON.stringify(data.detail);
-        }
-        // Other formats
-        else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-      
-      return rejectWithValue(errorMessage);
+      console.error('Login error:', error);
+      return rejectWithValue(
+        error.response?.data?.detail || 'Login failed. Please check your credentials.'
+      );
     }
   }
 );
@@ -70,35 +49,13 @@ export const register = createAsyncThunk(
       const user = await authService.getCurrentUser();
       return { user, token: authResponse.access_token };
     } catch (error: any) {
-      // Handle different error response formats
-      let errorMessage = 'Registration failed. Please try again.';
-      
-      if (error.response?.data) {
-        const data = error.response.data;
-        
-        // FastAPI validation error (array of error objects)
-        if (Array.isArray(data.detail)) {
-          errorMessage = data.detail.map((err: any) => err.msg).join(', ');
-        }
-        // Simple string error
-        else if (typeof data.detail === 'string') {
-          errorMessage = data.detail;
-        }
-        // Object error
-        else if (data.detail && typeof data.detail === 'object') {
-          errorMessage = JSON.stringify(data.detail);
-        }
-        // Other formats
-        else if (data.message) {
-          errorMessage = data.message;
-        }
-      }
-      
-      return rejectWithValue(errorMessage);
+      console.error('Register error:', error);
+      return rejectWithValue(
+        error.response?.data?.detail || 'Registration failed. Please try again.'
+      );
     }
   }
 );
-
 /**
  * Async thunk: Load user from token
  */
@@ -144,6 +101,7 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(login.fulfilled, (state, action: PayloadAction<{ user: User; token: string }>) => {
+        console.log('Login fulfilled:', action.payload);
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
@@ -151,6 +109,7 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(login.rejected, (state, action) => {
+        console.log('Login fulfilled:', action.payload);
         state.isLoading = false;
         state.isAuthenticated = false;
         state.user = null;
