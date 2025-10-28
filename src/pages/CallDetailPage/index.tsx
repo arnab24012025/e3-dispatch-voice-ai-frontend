@@ -33,7 +33,7 @@ const CallDetailPage: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await callService.getCall(callId);
+      const data = await callService.getCallById(callId);
       setCall(data);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load call details');

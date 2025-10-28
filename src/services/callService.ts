@@ -1,12 +1,30 @@
 import api from './api';
-import { Call, CallListResponse, CreateCallRequest, WebCallResponse } from '../types';
+import type { 
+  CallCreatePayload, 
+  WebCallResponse, 
+  PhoneCallResponse,
+  CallsResponse 
+} from '../types';
 
-/**
- * Call service for API calls
- */
 class CallService {
   /**
-   * Get all calls with optional filters
+   * Initiate a web call (browser-based)
+   */
+  async initiateWebCall(payload: CallCreatePayload): Promise<WebCallResponse> {
+    const response = await api.post<WebCallResponse>('/calls/web-call', payload);
+    return response.data;
+  }
+
+  /**
+   * Initiate a phone call (real telephony)
+   */
+  async initiatePhoneCall(payload: CallCreatePayload): Promise<PhoneCallResponse> {
+    const response = await api.post<PhoneCallResponse>('/calls/', payload);
+    return response.data;
+  }
+
+  /**
+   * Get list of calls with filters
    */
   async getCalls(params?: {
     skip?: number;
@@ -14,40 +32,24 @@ class CallService {
     load_number?: string;
     status?: string;
     sentiment?: string;
-  }): Promise<CallListResponse> {
-    const response = await api.get<CallListResponse>('/calls', { params });
+  }): Promise<CallsResponse> {
+    const response = await api.get<CallsResponse>('/calls/', { params });
     return response.data;
   }
 
   /**
-   * Get single call by ID
+   * Get call by ID
    */
-  async getCall(id: number): Promise<Call> {
-    const response = await api.get<Call>(`/calls/${id}`);
+  async getCallById(callId: number) {
+    const response = await api.get(`/calls/${callId}`);
     return response.data;
   }
 
   /**
-   * Create phone call
+   * Refresh call status from Retell AI
    */
-  async createPhoneCall(data: CreateCallRequest): Promise<Call> {
-    const response = await api.post<Call>('/calls', data);
-    return response.data;
-  }
-
-  /**
-   * Create web call
-   */
-  async createWebCall(data: CreateCallRequest): Promise<WebCallResponse> {
-    const response = await api.post<WebCallResponse>('/calls/web-call', data);
-    return response.data;
-  }
-
-  /**
-   * Refresh call status from Retell
-   */
-  async refreshCallStatus(id: number): Promise<Call> {
-    const response = await api.get<Call>(`/calls/${id}/refresh`);
+  async refreshCallStatus(callId: number) {
+    const response = await api.get(`/calls/${callId}/refresh`);
     return response.data;
   }
 }

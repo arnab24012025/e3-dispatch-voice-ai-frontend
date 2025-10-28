@@ -1,275 +1,320 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Card, Alert } from '../../components/common';
+import { Card, Button, Input, Alert } from '../../components/common';
+import { useAppSelector } from '../../redux/hooks';
 import { useAgents } from '../../hooks/useAgents';
 import callService from '../../services/callService';
 
 /**
- * New Call Page Component
+ * New Call Page - Supports both Web Calls and Phone Calls
  */
-const NewCallPage: React.FC = () => {
+const NewCall: React.FC = () => {
   const navigate = useNavigate();
   const { agents, isLoading: agentsLoading } = useAgents();
+  const { user } = useAppSelector((state) => state.auth);
 
-  const [isLoading, setIsLoading] = useState(false);
+  // Call Type: 'web' or 'phone'
+  const [callType, setCallType] = useState<'web' | 'phone'>('web');
+
+  // Form fields
+  const [driverName, setDriverName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loadNumber, setLoadNumber] = useState('');
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+
+  // UI state
+  const [isInitiating, setIsInitiating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    driver_name: '',
-    phone_number: '',
-    load_number: '',
-    agent_configuration_id: '',
-  });
+  // Get active agents only
+  const activeAgents = agents.filter((agent) => agent.is_active);
 
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  // Auto-select first active agent
-  useEffect(() => {
-    if (agents.length > 0 && !formData.agent_configuration_id) {
-      const activeAgent = agents.find((a) => a.is_active);
-      if (activeAgent) {
-        setFormData((prev) => ({
-          ...prev,
-          agent_configuration_id: activeAgent.id.toString(),
-        }));
-      }
-    }
-  }, [agents, formData.agent_configuration_id]);
-
-  /**
-   * Handle input change
-   */
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (formErrors[name]) {
-      setFormErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  /**
-   * Validate form
-   */
-  const validate = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.driver_name.trim()) {
-      errors.driver_name = 'Driver name is required';
-    }
-
-    if (!formData.phone_number.trim()) {
-      errors.phone_number = 'Phone number is required';
-    } else if (!/^\+?[\d\s()-]+$/.test(formData.phone_number)) {
-      errors.phone_number = 'Invalid phone number format';
-    }
-
-    if (!formData.load_number.trim()) {
-      errors.load_number = 'Load number is required';
-    }
-
-    if (!formData.agent_configuration_id) {
-      errors.agent_configuration_id = 'Please select an agent';
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  /**
-   * Handle form submit (Web Call)
-   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
-    if (!validate()) {
+    // Validation
+    if (!driverName.trim()) {
+      setError('Driver name is required');
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
+    if (!loadNumber.trim()) {
+      setError('Load number is required');
+      return;
+    }
+
+    if (!selectedAgentId) {
+      setError('Please select an agent');
+      return;
+    }
+
+    // Phone-specific validation
+    if (callType === 'phone' && !phoneNumber.trim()) {
+      setError('Phone number is required for phone calls');
+      return;
+    }
+
+    // Phone number format validation (basic)
+    if (callType === 'phone' && !/^\+?[1-9]\d{1,14}$/.test(phoneNumber.replace(/[\s\-()]/g, ''))) {
+      setError('Please enter a valid phone number (e.g., +1234567890)');
+      return;
+    }
+
+    setIsInitiating(true);
 
     try {
-      const response = await callService.createWebCall({
-        driver_name: formData.driver_name,
-        phone_number: formData.phone_number,
-        load_number: formData.load_number,
-        agent_configuration_id: parseInt(formData.agent_configuration_id),
-      });
+      if (callType === 'web') {
+        // Web Call Flow
+        const response = await callService.initiateWebCall({
+          driver_name: driverName,
+          phone_number: phoneNumber || 'web-call',
+          load_number: loadNumber,
+          agent_configuration_id: selectedAgentId,
+        });
 
-      setSuccess(true);
-      
-      // Redirect to call detail page after 2 seconds
-      setTimeout(() => {
-        navigate(`/calls/${response.call_id}`);
-      }, 2000);
+        // Navigate to web call interface
+        navigate('/calls/web-call-interface', {
+          state: {
+            callData: response,
+            driverName,
+            loadNumber,
+          },
+        });
+      } else {
+        // Phone Call Flow
+        const response = await callService.initiatePhoneCall({
+          driver_name: driverName,
+          phone_number: phoneNumber,
+          load_number: loadNumber,
+          agent_configuration_id: selectedAgentId,
+        });
+
+        // Show success message and redirect to call detail
+        alert(`Phone call initiated to ${phoneNumber}!\n\nCall ID: ${response.id}\nStatus: ${response.status}`);
+        navigate(`/calls/${response.id}`);
+      }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Failed to create web call';
-      setError(typeof errorMessage === 'string' ? errorMessage : 'Failed to create web call');
-    } finally {
-      setIsLoading(false);
+      setError(err.response?.data?.detail || err.message || 'Failed to initiate call');
+      setIsInitiating(false);
     }
   };
 
-  if (agentsLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading agents...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const activeAgents = agents.filter((a) => a.is_active);
-
-  if (activeAgents.length === 0) {
-    return (
-      <div className="space-y-6">
-        <button
-          onClick={() => navigate('/calls')}
-          className="text-primary-600 hover:text-primary-700 inline-flex items-center"
-        >
-          <span className="mr-2">←</span>
-          Back to Calls
-        </button>
-        <Alert
-          type="warning"
-          message="No active agents available. Please create and activate an agent first."
-        />
-        <Button onClick={() => navigate('/agents/new')} variant="primary">
-          Create Agent
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
-        <button
-          onClick={() => navigate('/calls')}
-          className="text-primary-600 hover:text-primary-700 mb-4 inline-flex items-center"
-        >
-          <span className="mr-2">←</span>
-          Back to Calls
-        </button>
-        <h1 className="text-3xl font-bold text-gray-900">Start New Test Call</h1>
-        <p className="text-gray-600 mt-2">
-          Create a browser-based test call to try your AI agent
+        <h1 className="text-2xl font-bold text-gray-900">Start New Call</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Initiate a voice call with a driver using AI agent
         </p>
       </div>
 
-      {/* Success Alert */}
-      {success && (
-        <Alert
-          type="success"
-          message="Web call created successfully! Redirecting to call details..."
-        />
-      )}
-
-      {/* Error Alert */}
-      {error && (
-        <Alert type="error" message={error} onClose={() => setError(null)} />
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        <Card padding="lg">
-          <div className="space-y-6">
-            {/* Agent Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Agent
-              </label>
-              <select
-                name="agent_configuration_id"
-                value={formData.agent_configuration_id}
-                onChange={handleChange}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
-                  formErrors.agent_configuration_id ? 'border-red-500' : 'border-gray-300'
-                }`}
-                disabled={isLoading}
-              >
-                <option value="">Choose an agent...</option>
-                {activeAgents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name} ({agent.scenario_type})
-                  </option>
-                ))}
-              </select>
-              {formErrors.agent_configuration_id && (
-                <p className="mt-1 text-sm text-red-600">{formErrors.agent_configuration_id}</p>
-              )}
+      {/* Call Type Selector */}
+      <Card padding="lg">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Call Type</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Web Call Option */}
+          <button
+            type="button"
+            onClick={() => setCallType('web')}
+            className={`p-6 border-2 rounded-lg transition-all ${
+              callType === 'web'
+                ? 'border-primary-600 bg-primary-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">🌐</span>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-lg font-semibold text-gray-900">Web Call</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Test call in browser (microphone required)
+                </p>
+                <div className="mt-2 flex items-center space-x-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                    ✓ Test Mode
+                  </span>
+                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    Instant Start
+                  </span>
+                </div>
+              </div>
             </div>
+          </button>
 
-            {/* Driver Name */}
-            <Input
-              label="Driver Name"
-              name="driver_name"
-              value={formData.driver_name}
-              onChange={handleChange}
-              error={formErrors.driver_name}
-              placeholder="John Smith"
-              disabled={isLoading}
-            />
+          {/* Phone Call Option */}
+          <button
+            type="button"
+            onClick={() => setCallType('phone')}
+            className={`p-6 border-2 rounded-lg transition-all ${
+              callType === 'phone'
+                ? 'border-primary-600 bg-primary-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <span className="text-4xl">📞</span>
+              </div>
+              <div className="flex-1 text-left">
+                <h3 className="text-lg font-semibold text-gray-900">Phone Call</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Real phone call to driver's number
+                </p>
+                <div className="mt-2 flex items-center space-x-2">
+                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                    Production
+                  </span>
+                  <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                    Requires Setup
+                  </span>
+                </div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </Card>
 
-            {/* Phone Number */}
+      {/* Call Form */}
+      <Card padding="lg">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Call Details</h2>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Driver Name */}
+          <Input
+            label="Driver Name"
+            value={driverName}
+            onChange={(e) => setDriverName(e.target.value)}
+            placeholder="John Doe"
+            required
+          />
+
+          {/* Phone Number (Only for Phone Calls) */}
+          {callType === 'phone' && (
             <Input
               label="Phone Number"
-              name="phone_number"
               type="tel"
-              value={formData.phone_number}
-              onChange={handleChange}
-              error={formErrors.phone_number}
-              placeholder="+1 (555) 123-4567"
-              disabled={isLoading}
-              helperText="Enter phone number with country code"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="+1234567890"
+              helperText="Enter with country code (e.g., +1 for US)"
+              required
             />
+          )}
 
-            {/* Load Number */}
-            <Input
-              label="Load Number"
-              name="load_number"
-              value={formData.load_number}
-              onChange={handleChange}
-              error={formErrors.load_number}
-              placeholder="LOAD-12345"
-              disabled={isLoading}
-            />
+          {/* Load Number */}
+          <Input
+            label="Load Number"
+            value={loadNumber}
+            onChange={(e) => setLoadNumber(e.target.value)}
+            placeholder="LOAD-12345"
+            required
+          />
 
-            {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                <span className="font-semibold">💡 Test Call Info:</span> This will create a
-                browser-based voice call for testing. You'll be able to speak with the AI agent
-                directly from your browser.
-              </p>
-            </div>
+          {/* Agent Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Agent
+            </label>
+            {agentsLoading ? (
+              <div className="text-sm text-gray-500">Loading agents...</div>
+            ) : activeAgents.length === 0 ? (
+              <Alert type="warning" message="No active agents available. Please create an agent first." />
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {activeAgents.map((agent) => (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    onClick={() => setSelectedAgentId(agent.id)}
+                    className={`p-4 border-2 rounded-lg text-left transition-all ${
+                      selectedAgentId === agent.id
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{agent.name}</h4>
+                        {agent.description && (
+                          <p className="text-sm text-gray-500 mt-1">{agent.description}</p>
+                        )}
+                        {agent.scenario_type && (
+                          <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                            {agent.scenario_type}
+                          </span>
+                        )}
+                      </div>
+                      {selectedAgentId === agent.id && (
+                        <span className="text-primary-600 text-xl ml-4">✓</span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end space-x-4 pt-4 border-t">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => navigate('/calls')}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" isLoading={isLoading}>
-                <span className="mr-2">📞</span>
-                Start Web Call
-              </Button>
+          {/* Error Alert */}
+          {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
+
+          {/* Submit Buttons */}
+          <div className="flex items-center space-x-4">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isInitiating}
+              disabled={!selectedAgentId || isInitiating || (callType === 'phone' && !phoneNumber)}
+              className="flex-1"
+            >
+              {isInitiating ? (
+                <>Starting {callType === 'web' ? 'Web' : 'Phone'} Call...</>
+              ) : (
+                <>
+                  {callType === 'web' ? '🌐 Start Web Call' : '📞 Initiate Phone Call'}
+                </>
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              onClick={() => navigate('/calls')}
+              disabled={isInitiating}
+            >
+              Cancel
+            </Button>
+          </div>
+
+          {/* Info Note */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <span className="text-blue-600 text-xl flex-shrink-0">ℹ️</span>
+              <div className="text-sm text-blue-800">
+                {callType === 'web' ? (
+                  <>
+                    <strong>Web Call:</strong> Opens in your browser. Make sure to allow microphone access.
+                    Perfect for testing agents before deploying to production.
+                  </>
+                ) : (
+                  <>
+                    <strong>Phone Call:</strong> Initiates a real phone call to the driver's number via Retell AI.
+                    Requires a configured Retell phone number in your account settings.
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </Card>
-      </form>
+        </form>
+      </Card>
     </div>
   );
 };
 
-export default NewCallPage;
+export default NewCall;
