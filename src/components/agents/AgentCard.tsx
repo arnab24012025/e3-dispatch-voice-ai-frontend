@@ -86,7 +86,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onDelete, onToggleS
           </button>
 
           {/* Delete */}
-          <button
+          {/* <button
             onClick={() => {
               if (window.confirm(`Delete agent "${agent.name}"?`)) {
                 onDelete(agent.id);
@@ -95,7 +95,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent, onDelete, onToggleS
             className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
           >
             Delete
-          </button>
+          </button> */}
         </div>
       </div>
     </Card>

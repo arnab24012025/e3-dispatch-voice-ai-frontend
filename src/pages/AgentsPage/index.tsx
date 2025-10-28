@@ -14,20 +14,6 @@ const AgentsPage: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  /**
-   * Handle delete agent
-   */
-  const handleDelete = async (id: number) => {
-    try {
-      await agentService.deleteAgent(id);
-      setActionSuccess('Agent deleted successfully');
-      refreshAgents();
-      setTimeout(() => setActionSuccess(null), 3000);
-    } catch (err: any) {
-      setActionError(err.response?.data?.detail || 'Failed to delete agent');
-      setTimeout(() => setActionError(null), 5000);
-    }
-  };
 
   /**
    * Handle toggle agent status
@@ -107,7 +93,7 @@ const AgentsPage: React.FC = () => {
             <AgentCard
               key={agent.id}
               agent={agent}
-              onDelete={handleDelete}
+              onDelete={()=>{}}
               onToggleStatus={handleToggleStatus}
             />
           ))}

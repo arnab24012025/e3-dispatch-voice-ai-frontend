@@ -147,6 +147,17 @@ dispatch-voice-ai-frontend/
   - Key topics
   - Summary
 
+### ✅ Call Management
+- **Advanced Search**: Real-time search across driver names, load numbers, and phone numbers
+- **Audio Playback**: In-browser call recording playback with download option
+- **Emergency Display**: Dedicated emergency status cards with escalation tracking
+- **Structured Data Views**: Beautiful cards for check-in and emergency data instead of raw JSON
+
+### ✅ Data Collection
+- **Emergency Calls**: Captures emergency type, location, safety status, injury status, load security, and escalation status
+- **Check-in Calls**: Structured delivery status, location, ETA, delay reasons, and notes
+- **Real-time Updates**: All data collected during live calls via WebSocket
+
 ### ✅ Analytics
 - Sentiment distribution charts
 - Call volume trends

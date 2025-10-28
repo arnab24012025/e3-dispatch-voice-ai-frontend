@@ -14,6 +14,7 @@ import AgentsPage from './pages/AgentsPage';
 import AgentFormPage from './pages/AgentFormPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
+import WebCallInterface from './pages/WebCallPage';
 
 /**
  * Protected Route Component
@@ -92,6 +93,16 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+  path="/calls/web-call-interface"
+  element={
+    <ProtectedRoute>
+      <WebCallInterface />
+    </ProtectedRoute>
+  }
+/>
+
+
         <Route
           path="/agents"
           element={

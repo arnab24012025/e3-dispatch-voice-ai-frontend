@@ -203,15 +203,38 @@ const CallDetailPage: React.FC = () => {
         )}
 
         {/* Recording */}
-        {call.recording_url && (
-          <div className="mt-6">
-            <p className="text-sm font-medium text-gray-700 mb-2">Call Recording</p>
-            <audio controls className="w-full">
-              <source src={call.recording_url} type="audio/mpeg" />
-              Your browser does not support the audio element.
-            </audio>
-          </div>
-        )}
+       {call.recording_url && (
+  <div className="mt-6 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center space-x-2">
+        <span className="text-xl">🎧</span>
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Call Recording</p>
+      </div>
+      
+      <a 
+        href={call.recording_url} 
+        download
+        className="px-3 py-1 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors"
+      >
+        ⬇️ Download
+      </a>
+    </div>
+    
+    <audio 
+      controls 
+      className="w-full"
+      preload="metadata"
+    >
+      <source src={call.recording_url} type="audio/mpeg" />
+    </audio>
+    
+    {call.duration && (
+      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        Duration: {Math.floor(call.duration / 60)}:{(call.duration % 60).toString().padStart(2, '0')}
+      </p>
+    )}
+  </div>
+)}
       </Card>
 
       {/* Post-Call Analysis */}
@@ -238,15 +261,182 @@ const CallDetailPage: React.FC = () => {
 
       {/* Structured Results */}
       {call.structured_results && Object.keys(call.structured_results).length > 0 && (
-        <Card padding="lg">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Extracted Data</h3>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-              {JSON.stringify(call.structured_results, null, 2)}
-            </pre>
+  <>
+    {/* Emergency Status Card - Show if emergency */}
+    {call.structured_results.emergency && (
+      <Card padding="lg">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              🚨 Emergency Status
+            </h3>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                call.structured_results.escalation_status === "Connected to Human Dispatcher"
+                  ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+              }`}
+            >
+              {call.structured_results.escalation_status === "Connected to Human Dispatcher"
+                ? "✅ Dispatcher Connected"
+                : "⏳ Escalation Required"}
+            </span>
           </div>
-        </Card>
-      )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Emergency Type */}
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+              <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-1">
+                Emergency Type
+              </p>
+              <p className="text-sm text-red-900 dark:text-red-100 font-semibold capitalize">
+                {call.structured_results.emergency_type || "Unknown"}
+              </p>
+            </div>
+
+            {/* Location */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
+                Emergency Location
+              </p>
+              <p className="text-sm text-blue-900 dark:text-blue-100 font-semibold">
+                {call.structured_results.emergency_location || "Not provided"}
+              </p>
+            </div>
+
+            {/* Safety Status */}
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">
+                Safety Status
+              </p>
+              <p className="text-sm text-green-900 dark:text-green-100">
+                {call.structured_results.safety_status || "Not provided"}
+              </p>
+            </div>
+
+            {/* Injury Status */}
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+              <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">
+                Injury Status
+              </p>
+              <p className="text-sm text-purple-900 dark:text-purple-100">
+                {call.structured_results.injury_status || "Not provided"}
+              </p>
+            </div>
+
+            {/* Load Secure */}
+            <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-1">
+                Load Security
+              </p>
+              <p className="text-sm text-orange-900 dark:text-orange-100 font-semibold">
+                {call.structured_results.load_secure === true
+                  ? "✅ Load Secure"
+                  : call.structured_results.load_secure === false
+                  ? "❌ Load Not Secure"
+                  : "Unknown"}
+              </p>
+            </div>
+
+            {/* Description */}
+            {call.structured_results.description && (
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 md:col-span-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
+                  Description
+                </p>
+                <p className="text-sm text-gray-900 dark:text-white">
+                  {call.structured_results.description}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+    )}
+
+    {/* Check-in Data Card - Show if NOT emergency */}
+    {!call.structured_results.emergency && call.structured_results.delivery_status && (
+      <Card padding="lg">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+          📦 Delivery Status Update
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Delivery Status */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">
+              Status
+            </p>
+            <p className="text-sm text-blue-900 dark:text-blue-100 font-semibold capitalize">
+              {call.structured_results.delivery_status}
+            </p>
+          </div>
+
+          {/* Current Location */}
+          {call.structured_results.current_location && (
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-xs text-green-600 dark:text-green-400 font-medium mb-1">
+                Current Location
+              </p>
+              <p className="text-sm text-green-900 dark:text-green-100">
+                {call.structured_results.current_location}
+              </p>
+            </div>
+          )}
+
+          {/* ETA */}
+          {call.structured_results.eta && (
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+              <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">
+                ETA
+              </p>
+              <p className="text-sm text-purple-900 dark:text-purple-100">
+                {call.structured_results.eta}
+              </p>
+            </div>
+          )}
+
+          {/* Delay Reason */}
+          {call.structured_results.delay_reason && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mb-1">
+                Delay Reason
+              </p>
+              <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                {call.structured_results.delay_reason}
+              </p>
+            </div>
+          )}
+
+          {/* Notes */}
+          {call.structured_results.notes && (
+            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 md:col-span-2">
+              <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
+                Notes
+              </p>
+              <p className="text-sm text-gray-900 dark:text-white">
+                {call.structured_results.notes}
+              </p>
+            </div>
+          )}
+        </div>
+      </Card>
+    )}
+
+    {/* Raw JSON (Developer View) */}
+    <Card padding="lg">
+      <details>
+        <summary className="text-lg font-bold text-gray-900 dark:text-white mb-4 cursor-pointer hover:text-primary-600">
+          🔍 Raw Extracted Data (Developer View)
+        </summary>
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700 mt-4">
+          <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+            {JSON.stringify(call.structured_results, null, 2)}
+          </pre>
+        </div>
+      </details>
+    </Card>
+  </>
+)}
     </div>
   );
 };

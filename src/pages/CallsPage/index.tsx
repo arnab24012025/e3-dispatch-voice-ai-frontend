@@ -17,19 +17,21 @@ const CallsPage: React.FC = () => {
 
   // Fetch calls with filters
   const { calls, total, isLoading, error, refreshCalls } = useCalls({
-    limit: 50,
-    load_number: searchTerm || undefined,
+    limit: 100,
     status: statusFilter || undefined,
     sentiment: sentimentFilter || undefined,
   });
 
-  /**
-   * Handle search
-   */
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    refreshCalls();
-  };
+  const filteredCalls = calls.filter((call) => {
+    if (!searchTerm) return true;
+    
+    const search = searchTerm.toLowerCase();
+    return (
+      call.driver_name.toLowerCase().includes(search) ||
+      call.load_number.toLowerCase().includes(search) ||
+      call.phone_number.toLowerCase().includes(search)
+    );
+  });
 
   /**
    * Clear filters
@@ -67,7 +69,7 @@ const CallsPage: React.FC = () => {
           size="md"
         >
           <span className="mr-2">📞</span>
-          New Test Call
+          New Call
         </Button>
       </div>
 
@@ -78,15 +80,15 @@ const CallsPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white p-6 rounded-lg border border-gray-200">
-        <form onSubmit={handleSearch} className="space-y-4">
+        <div  className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search */}
             <div className="md:col-span-2">
-              <Input
-                label="Search by Load Number"
+             <Input
+                label="Search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Enter load number..."
+                placeholder="🔍 Search driver, load, or phone..."
               />
             </div>
 
@@ -128,40 +130,47 @@ const CallsPage: React.FC = () => {
 
           {/* Filter Actions */}
           <div className="flex items-center space-x-4">
-            <Button type="submit" variant="primary" size="sm">
-              Apply Filters
-            </Button>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-gray-600 hover:text-gray-900"
-            >
-              Clear Filters
-            </button>
-            <div className="text-sm text-gray-500 ml-auto">
-              {total} call{total !== 1 ? 's' : ''} found
-            </div>
+           
+           <Button 
+  type="button" 
+  variant="secondary" 
+  size="sm"
+  onClick={clearFilters}
+>
+  Clear Filters
+</Button>
+           <div className="text-sm text-gray-500 ml-auto">
+  {filteredCalls.length} of {total} call{total !== 1 ? 's' : ''}
+  {searchTerm && ` (filtered)`}
+</div>
           </div>
-        </form>
+        </div>
       </div>
 
       {/* Calls Table */}
-      {calls.length === 0 ? (
+      {filteredCalls.length === 0  ? (
         <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
           <span className="text-6xl block mb-4">📞</span>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No calls yet</h3>
-          <p className="text-gray-600 mb-6">
-            Start your first test call to see it appear here
-          </p>
-          <Button
-            onClick={() => navigate('/calls/new')}
-            variant="primary"
-          >
-            Start Test Call
-          </Button>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+  {searchTerm ? 'No calls found' : 'No calls yet'}
+</h3>
+<p className="text-gray-600 mb-6">
+  {searchTerm 
+    ? `No results matching "${searchTerm}"`
+    : 'Start your first test call to see it appear here'
+  }
+</p>
+          {!searchTerm && (
+  <Button
+    onClick={() => navigate('/calls/new')}
+    variant="primary"
+  >
+    Start Test Call
+  </Button>
+)}
         </div>
       ) : (
-        <CallTable calls={calls} />
+        <CallTable calls={filteredCalls} />
       )}
     </div>
   );
